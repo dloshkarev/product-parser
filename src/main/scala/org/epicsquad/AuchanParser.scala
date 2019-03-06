@@ -2,16 +2,18 @@ package org.epicsquad
 
 import java.nio.file.{Files, Paths}
 
+import com.typesafe.scalalogging.StrictLogging
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.JavaConversions._
 
-class AuchanParser extends ProductParser {
+class AuchanParser extends ProductParser with StrictLogging {
   override val baseUrl: String = "https://www.auchan.ru/"
 
   override def parse(productUrlsFile: String): Seq[Product] = {
+    logger.info("Parsing started")
     val productUrls = parseProductUrls(productUrlsFile)
     webDriver.close()
     Seq()
@@ -19,16 +21,26 @@ class AuchanParser extends ProductParser {
 
   def parseProductUrls(productUrlsFile: String): Set[String] = {
     val productUrls = (browser.get(baseUrl) >> elementList(".m-menu__items a")).flatMap { menu =>
-      menu.href match {
-        case Some(menuUrl) =>
-          (browser.get(menuUrl) >> elementList(".category__item-title a")).flatMap { category =>
-            category.href match {
-              case Some(categoryUrl) =>
-                getProductUrls(categoryUrl)
-              case None => throw new ParseException("Category block not found")
+      try {
+        menu.href match {
+          case Some(menuUrl) =>
+            (browser.get(menuUrl) >> elementList(".category__item-title a")).flatMap { category =>
+              category.href match {
+                case Some(categoryUrl) =>
+                  getProductUrls(categoryUrl)
+                case None =>
+                  logger.error(s"Category block not found for url: $menuUrl")
+                  None
+              }
             }
-          }
-        case None => throw new ParseException("Menu block not found")
+          case None =>
+            logger.error(s"Menu block not found for url: $baseUrl")
+            None
+        }
+      } catch {
+        case e: Throwable =>
+          logger.error(s"Something went wrong!", e)
+          None
       }
     }
     Files.write(Paths.get(productUrlsFile), productUrls.asJava)
@@ -39,7 +51,7 @@ class AuchanParser extends ProductParser {
     val url = categoryUrl + "?p=" + page
     webDriver.get(url)
     val title = webDriver.getTitle
-    println(title)
+    logger.info(title)
     if (title == "Страница не найдена - Интернет магазин Ашан") acc
     else {
       val productUrls = webDriver.findElementsByCssSelector(".products__item-link").toList.flatMap(_.href)
