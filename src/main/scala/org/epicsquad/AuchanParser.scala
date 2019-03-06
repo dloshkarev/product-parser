@@ -40,7 +40,7 @@ class AuchanParser extends ProductParser {
     webDriver.get(url)
     val title = webDriver.getTitle
     println(title)
-    if (page == 2 || title == "Страница не найдена - Интернет магазин Ашан") acc
+    if (title == "Страница не найдена - Интернет магазин Ашан") acc
     else {
       val productUrls = webDriver.findElementsByCssSelector(".products__item-link").toList.flatMap(_.href)
       Thread.sleep(5000)
