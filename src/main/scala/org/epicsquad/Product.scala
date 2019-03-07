@@ -1,5 +1,5 @@
 package org.epicsquad
 
-case class Product(name: String, category: Option[String]) {
-  def toCsv = name + ";" + category.getOrElse("")
+case class Product(url: String, name: String = "", category: Option[String] = None) {
+  def toCsv = url + ";" + name + ";" + category.getOrElse("")
 }

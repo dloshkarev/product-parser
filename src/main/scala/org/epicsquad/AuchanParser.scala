@@ -59,19 +59,25 @@ class AuchanParser extends ProductParser {
     logger.info("Parsing products started")
     val buffer = mutable.ListBuffer.empty[String]
     urls.zipWithIndex.foreach { case (url, i) =>
-      if (i % 100 == 0) {
+      if (i % 50 == 0) {
         appendLinesToFile(productsFile, buffer)
         buffer.clear()
         logger.info(s"$i of ${urls.size} stored into $productsFile")
       }
-      val doc = browser.get(url)
-      val name = doc >> text("h1")
-      val category = (doc >> elementList(".breadcrumbs__list a")).drop(1).map(_.text).mkString("/")
-      val product = Product(name, Some(category))
-      buffer += product.toCsv + "\n"
-      product
+      try {
+        val doc = browser.get(url)
+        val name = doc >> text("h1")
+        val category = (doc >> elementList(".breadcrumbs__list a")).drop(1).map(_.text).mkString("/")
+        val product = Product(url, name, Some(category))
+        buffer += product.toCsv + "\n"
+      } catch {
+        case e: Throwable =>
+          logger.error("Error during product parsing", e)
+          val product = Product(url)
+          buffer += product.toCsv + ";" + e.getLocalizedMessage + "\n"
+      }
     }
-    logger.info("Parsing products started")
+    logger.info("Parsing products finished")
     if (buffer.nonEmpty) {
       appendLinesToFile(productsFile, buffer)
     }
