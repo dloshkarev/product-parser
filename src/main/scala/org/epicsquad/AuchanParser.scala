@@ -68,7 +68,8 @@ class AuchanParser extends ProductParser {
         val doc = browser.get(url)
         val name = doc >> text("h1")
         val category = (doc >> elementList(".breadcrumbs__list a")).drop(1).map(_.text).mkString("/")
-        val product = Product(url, name, Some(category))
+        val brand = doc >> text(".prcard__feat-item strong")
+        val product = Product(url, name, brand, Some(category))
         buffer += product.toCsv + "\n"
       } catch {
         case e: Throwable =>
