@@ -24,15 +24,17 @@ class AuchanParser extends ProductParser with StrictLogging {
       try {
         menu.href match {
           case Some(menuUrl) =>
-            (browser.get(menuUrl) >> elementList(".category__item-title a")).flatMap { category =>
-              category.href match {
-                case Some(categoryUrl) =>
-                  getProductUrls(categoryUrl)
-                case None =>
-                  logger.error(s"Category block not found for url: $menuUrl")
-                  None
+            if (menuUrl != "#") {
+              (browser.get(menuUrl) >> elementList(".category__item-title a")).flatMap { category =>
+                category.href match {
+                  case Some(categoryUrl) =>
+                    getProductUrls(categoryUrl)
+                  case None =>
+                    logger.error(s"Category block not found for url: $menuUrl")
+                    None
+                }
               }
-            }
+            } else None
           case None =>
             logger.error(s"Menu block not found for url: $baseUrl")
             None
@@ -55,7 +57,6 @@ class AuchanParser extends ProductParser with StrictLogging {
     if (title == "Страница не найдена - Интернет магазин Ашан") acc
     else {
       val productUrls = webDriver.findElementsByCssSelector(".products__item-link").toList.flatMap(_.href)
-      Thread.sleep(5000)
       getProductUrls(categoryUrl, page + 1, acc ++ productUrls)
     }
   }
