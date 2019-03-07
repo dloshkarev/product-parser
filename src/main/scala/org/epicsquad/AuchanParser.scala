@@ -6,8 +6,8 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 
-import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.JavaConversions._
+import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class AuchanParser extends ProductParser with StrictLogging {
   override val baseUrl: String = "https://www.auchan.ru/"
@@ -20,24 +20,23 @@ class AuchanParser extends ProductParser with StrictLogging {
   }
 
   def parseProductUrls(productUrlsFile: String): Set[String] = {
-    val productUrls = (browser.get(baseUrl) >> elementList(".m-menu__items a")).flatMap { menu =>
+    val menuUrls = prepareUrls(browser.get(baseUrl) >> elementList(".m-menu__items a"))
+    val productUrls = menuUrls.flatMap { menuUrl =>
       try {
-        menu.href match {
-          case Some(menuUrl) =>
-            if (menuUrl != "#") {
-              (browser.get(menuUrl) >> elementList(".category__item-title a")).flatMap { category =>
-                category.href match {
-                  case Some(categoryUrl) =>
-                    getProductUrls(categoryUrl)
-                  case None =>
-                    logger.error(s"Category block not found for url: $menuUrl")
-                    None
-                }
-              }
-            } else None
-          case None =>
-            logger.error(s"Menu block not found for url: $baseUrl")
-            None
+        val standardCategories = prepareUrls(browser.get(menuUrl) >> elementList(".category__item-title a"))
+        if (standardCategories.nonEmpty) {
+          standardCategories.flatMap { categoryUrl =>
+            getProductUrls(categoryUrl)
+          }
+        } else {
+          val imagesCategories = prepareUrls(browser.get(menuUrl) >> elementList(".ldo_cat_block a"))
+          if (imagesCategories.nonEmpty) {
+            imagesCategories.flatMap { categoryUrl =>
+              getProductUrls(categoryUrl)
+            }
+          } else {
+            getProductUrls(menuUrl)
+          }
         }
       } catch {
         case e: Throwable =>

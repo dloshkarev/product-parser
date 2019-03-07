@@ -17,6 +17,8 @@ trait ProductParser {
   implicit def elementToExt(e: Element): ElementExt = new ElementExt(e)
   implicit def webElementToExt(e: WebElement): WebElementExt = new WebElementExt(e)
 
+  def prepareUrls(elems: Seq[Element]) = elems.flatMap(_.href).filterNot(_ == "#").distinct
+
   def parse(productUrlsFile: String): Seq[Product]
 }
 
