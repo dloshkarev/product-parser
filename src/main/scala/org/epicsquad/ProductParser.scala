@@ -19,7 +19,7 @@ trait ProductParser {
 
   def prepareUrls(elems: Seq[Element]) = elems.flatMap(_.href).filterNot(_ == "#").distinct
 
-  def parse(productUrlsFile: String): Seq[Product]
+  def parse(partsDirectory: String, productUrlsFile: String): Seq[Product]
 }
 
 class ElementExt(e: Element) {
