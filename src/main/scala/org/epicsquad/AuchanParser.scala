@@ -44,7 +44,7 @@ class AuchanParser extends ProductParser with StrictLogging {
     webDriver.get(url)
     val title = webDriver.getTitle
     logger.info(title)
-    if (title == "Страница не найдена - Интернет магазин Ашан") acc
+    if ((page > 1 && !webDriver.getCurrentUrl.contains("?p=")) || title == "Страница не найдена - Интернет магазин Ашан") acc
     else {
       val productUrls = webDriver.findElementsByCssSelector(".products__item-link").toList.flatMap(_.href)
       getProductUrls(categoryUrl, page + 1, acc ++ productUrls)
