@@ -5,10 +5,14 @@ import java.net.URL
 
 import com.typesafe.scalalogging.StrictLogging
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
+import net.ruippeixotog.scalascraper.browser.JsoupBrowser.JsoupDocument
+import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
+import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.{DesiredCapabilities, RemoteWebDriver}
 
+import scala.io.Source
 import scala.reflect.io.File
 
 trait ProductParser extends StrictLogging {
@@ -47,9 +51,27 @@ trait ProductParser extends StrictLogging {
     else throw new RuntimeException("Selenium standalone server not started!")
   }
 
-  def parse(productUrlsFile: String, productsFile: String): Unit
+  def parse(productUrlsFile: String, productsFile: String): Unit = {
+    logger.info("Parsing urls started")
+    val productUrls = parseProductUrls(productUrlsFile)
+    logger.info(s"Parsing urls finished. Stored ${productUrls.size} into $productUrlsFile")
+    logger.info("Parsing products started")
+    parseProducts(productUrls, productsFile)
+    logger.info(s"Parsing products finished. Stored into $productsFile")
+    if (webDriverOpt.nonEmpty) {
+      webDriver.close()
+    }
+  }
 
-  def parseProductsFromFile(file: String, productsFile: String): Unit
+  def parseMeta(doc: JsoupDocument, attrValue: String, attrName: String = "itemprop"): Option[String] = {
+    doc >?> extractor("meta[" + attrName + "=" + attrValue + "]", attr("content"))
+  }
+
+  def parseProductUrls(productUrlsFile: String): Seq[String]
+
+  def parseProductsFromFile(file: String, productsFile: String): Unit = {
+    parseProducts(Source.fromFile(file).getLines().toSeq, productsFile)
+  }
 
   protected def parseProducts(urls: Seq[String], productsFile: String): Unit
 }

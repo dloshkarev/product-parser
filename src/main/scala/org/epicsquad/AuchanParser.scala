@@ -8,20 +8,11 @@ import net.ruippeixotog.scalascraper.dsl.DSL._
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable
-import scala.io.Source
 
 class AuchanParser extends ProductParser {
   override val baseUrl: String = "https://www.auchan.ru/"
 
-  override def parse(productUrlsFile: String, productsFile: String): Unit = {
-    logger.info("Parsing urls started")
-    val productUrls = parseProductUrls(productUrlsFile)
-    webDriver.close()
-    logger.info(s"Parsing urls finished. Stored ${productUrls.size} into $productUrlsFile")
-    parseProducts(productUrls, productsFile)
-  }
-
-  def parseProductUrls(productUrlsFile: String): Seq[String] = {
+  override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     deleteFileIfExists(productUrlsFile)
     val menuUrls = prepareUrls(browser.get(baseUrl) >> elementList(".m-menu__submenu-items--other a, .m-menu__submenu-heading a"))
     val productUrls = menuUrls.zipWithIndex.flatMap { case (menuUrl, i) =>
@@ -50,10 +41,6 @@ class AuchanParser extends ProductParser {
     }
   }
 
-  override def parseProductsFromFile(file: String, productsFile: String): Unit = {
-    parseProducts(Source.fromFile(file).getLines().toSeq, productsFile)
-  }
-
   override def parseProducts(urls: Seq[String], productsFile: String): Unit = {
     deleteFileIfExists(productsFile)
     logger.info("Parsing products started")
@@ -73,7 +60,7 @@ class AuchanParser extends ProductParser {
         buffer += product.toCsv + "\n"
       } catch {
         case e: Throwable =>
-          logger.error("Error during product parsing", e)
+          logger.error("Error during product parsing: " + url)
           val product = Product(url)
           buffer += product.toCsv + ";" + e.getLocalizedMessage + "\n"
       }
