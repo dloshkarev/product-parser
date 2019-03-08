@@ -2,13 +2,13 @@ package org.epicsquad.parsers
 
 import java.nio.file.{Files, Paths}
 
+import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import org.epicsquad.Product
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.mutable
 
 class AuchanParser extends ProductParser {
   override val baseUrl: String = "https://www.auchan.ru/"
@@ -42,32 +42,10 @@ class AuchanParser extends ProductParser {
     }
   }
 
-  override protected def parseProductsChunk(urlsChunk: Seq[String], productsFile: String): Unit = {
-    logger.info("Parsing products started")
-    val buffer = mutable.ListBuffer.empty[String]
-    urlsChunk.zipWithIndex.foreach { case (url, i) =>
-      if (i % 50 == 0) {
-        appendLinesToFile(productsFile, buffer)
-        buffer.clear()
-        logger.info(s"$i of ${urlsChunk.size} stored into $productsFile")
-      }
-      try {
-        val doc = browser.get(url)
-        val name = doc >> text("h1")
-        val category = (doc >> elementList(".breadcrumbs__list a")).drop(1).map(_.text).mkString("/")
-        val brand = parseMeta(doc, "brand")
-        val product = Product(url, name, brand, Some(category))
-        buffer += product.toCsv + "\n"
-      } catch {
-        case e: Throwable =>
-          logger.error("Error during product parsing: " + url)
-          val product = Product(url)
-          buffer += product.toCsv + ";" + e.getLocalizedMessage + "\n"
-      }
-    }
-    logger.info("Parsing products finished")
-    if (buffer.nonEmpty) {
-      appendLinesToFile(productsFile, buffer)
-    }
+  override protected def parseProduct(doc: JsoupBrowser.JsoupDocument, url: String): Product = {
+    val name = doc >> text("h1")
+    val category = (doc >> elementList(".breadcrumbs__list a")).drop(1).map(_.text).mkString("/")
+    val brand = parseMeta(doc, "brand")
+    Product(url, name, brand, Some(category))
   }
 }

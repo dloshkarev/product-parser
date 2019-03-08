@@ -2,13 +2,13 @@ package org.epicsquad.parsers
 
 import java.nio.file.{Files, Paths}
 
+import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
 import org.epicsquad.Product
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
-import scala.collection.mutable
 
 class WildberriesParser extends ProductParser {
   override protected val baseUrl: String = "https://www.wildberries.ru"
@@ -52,37 +52,15 @@ class WildberriesParser extends ProductParser {
       }
     } catch {
       case _: Throwable =>
-        logger.info(s"Cannot get page by $url")
+        logger.info(s"Cannot parse page by $url")
         acc
     }
   }
 
-  override protected def parseProductsChunk(urlsChunk: Seq[String], productsFile: String): Unit = {
-    logger.info("Parsing products started")
-    val buffer = mutable.ListBuffer.empty[String]
-    urlsChunk.zipWithIndex.foreach { case (url, i) =>
-      if (i % 50 == 0) {
-        appendLinesToFile(productsFile, buffer)
-        buffer.clear()
-        logger.info(s"$i of ${urlsChunk.size} stored into $productsFile")
-      }
-      try {
-        val doc = browser.get(url)
-        val category = (doc >?> elementList(".breadcrumbs span:not(.divider)")).flatMap(x => Option(x.drop(1).map(_.text).mkString("/")))
-        val name = doc >> text("h1")
-        val brand = parseMeta(doc, "brand")
-        val product = Product(url, name, brand, category)
-        buffer += product.toCsv + "\n"
-      } catch {
-        case e: Throwable =>
-          logger.error("Error during product parsing: " + url)
-          val product = Product(url)
-          buffer += product.toCsv + ";" + e.getLocalizedMessage + "\n"
-      }
-    }
-    logger.info("Parsing products finished")
-    if (buffer.nonEmpty) {
-      appendLinesToFile(productsFile, buffer)
-    }
+  override protected def parseProduct(doc: JsoupBrowser.JsoupDocument, url: String): Product = {
+    val category = (doc >?> elementList(".breadcrumbs span:not(.divider)")).flatMap(x => Option(x.drop(1).map(_.text).mkString("/")))
+    val name = doc >> text("h1")
+    val brand = parseMeta(doc, "brand")
+    Product(url, name, brand, category)
   }
 }

@@ -9,10 +9,11 @@ import net.ruippeixotog.scalascraper.browser.JsoupBrowser.JsoupDocument
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
-import org.epicsquad.Settings
+import org.epicsquad.{Product, Settings}
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.{DesiredCapabilities, RemoteWebDriver}
 
+import scala.collection.mutable
 import scala.io.Source
 import scala.reflect.io.File
 
@@ -83,10 +84,32 @@ trait ProductParser extends StrictLogging {
     else if (take != 0) urls.take(take)
     else urls
 
-    parseProductsChunk(urlsChunk, productsFile)
+    logger.info("Parsing products started")
+    val buffer = mutable.ListBuffer.empty[String]
+    urlsChunk.zipWithIndex.foreach { case (url, i) =>
+      if (i % 50 == 0) {
+        appendLinesToFile(productsFile, buffer)
+        buffer.clear()
+        logger.info(s"$i of ${urlsChunk.size} stored into $productsFile")
+      }
+      try {
+        val doc = browser.get(url)
+        val product = parseProduct(doc, url)
+        buffer += product.toCsv + "\n"
+      } catch {
+        case e: Throwable =>
+          logger.error("Error during product parsing: " + url)
+          val product = Product(url)
+          buffer += product.toCsv + ";" + e.getLocalizedMessage + "\n"
+      }
+    }
+    logger.info("Parsing products finished")
+    if (buffer.nonEmpty) {
+      appendLinesToFile(productsFile, buffer)
+    }
   }
 
-  protected def parseProductsChunk(urlsChunk: Seq[String], productFile: String): Unit
+  protected def parseProduct(doc: JsoupDocument, url: String): Product
 }
 
 class ElementExt(e: Element) {
