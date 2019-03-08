@@ -57,18 +57,16 @@ class DochkiSinochkiParser extends ProductParser {
     productUrls
   }
 
-  def getProductUrls(categoryUrl: String, page: Int = 1, acc: List[String] = List(), needToStop: Boolean = false): List[String] = {
+  def getProductUrls(categoryUrl: String, page: Int = 1, acc: List[String] = List()): List[String] = {
     val url = categoryUrl + "?line=&PAGEN_1=" + page
     try {
       val doc = browser.get(url)
       val title = doc >> text("title")
       logger.info(title)
-      if (needToStop) acc
-      else {
-        val productUrls = (doc >> elementList(".news_bottom a")).flatMap(_.href).map(u => baseUrl + u)
-        val lastPage = doc >?> text(".pagination-new a:last-of-type")
-        getProductUrls(categoryUrl, page + 1, acc ++ productUrls, needToStop = lastPage.isEmpty || lastPage.get != "next")
-      }
+      val productUrls = (doc >> elementList(".news_bottom a")).flatMap(_.href).map(u => baseUrl + u)
+      val lastPage = doc >?> text(".pagination-new a:last-of-type")
+      if (lastPage.isEmpty || lastPage.get != "next") acc ++ productUrls
+      else  getProductUrls(categoryUrl, page + 1, acc ++ productUrls)
     } catch {
       case e: Throwable =>
         logger.info(s"Cannot parse page by $url", e)

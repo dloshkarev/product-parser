@@ -113,7 +113,12 @@ trait ProductParser extends StrictLogging {
 }
 
 class ElementExt(e: Element) {
-  def href: Option[String] = if (e.hasAttr("href")) Some(e.attr("href")) else None
+  def href: Option[String] = if (e.hasAttr("href")) {
+    val baseHref = e.attr("href")
+    val href = if (baseHref.startsWith("/") || baseHref.startsWith("http")) baseHref
+    else "/" + baseHref
+    Some(href)
+  } else None
 }
 
 class WebElementExt(e: WebElement) {
