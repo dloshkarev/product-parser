@@ -70,11 +70,23 @@ trait ProductParser extends StrictLogging {
 
   def parseProductUrls(productUrlsFile: String): Seq[String]
 
-  def parseProductsFromFile(file: String, productsFile: String): Unit = {
-    parseProducts(Source.fromFile(file).getLines().toSeq, productsFile)
+  def parseProductsFromFile(file: String, productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
+    parseProducts(Source.fromFile(file).getLines().toSeq, productsFile, drop, take)
   }
 
-  protected def parseProducts(urls: Seq[String], productsFile: String): Unit
+  def parseProducts(urls: Seq[String], productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
+    if (drop == 0) {
+      deleteFileIfExists(productsFile)
+    }
+    val urlsChunk = if (drop != 0 && take != 0) urls.slice(drop, take)
+    else if (drop != 0) urls.drop(drop)
+    else if (take != 0) urls.take(take)
+    else urls
+
+    parseProductsChunk(urlsChunk, productsFile)
+  }
+
+  protected def parseProductsChunk(urlsChunk: Seq[String], productFile: String): Unit
 }
 
 class ElementExt(e: Element) {

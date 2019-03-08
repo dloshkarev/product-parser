@@ -42,15 +42,14 @@ class AuchanParser extends ProductParser {
     }
   }
 
-  override def parseProducts(urls: Seq[String], productsFile: String): Unit = {
-    deleteFileIfExists(productsFile)
+  override protected def parseProductsChunk(urlsChunk: Seq[String], productsFile: String): Unit = {
     logger.info("Parsing products started")
     val buffer = mutable.ListBuffer.empty[String]
-    urls.zipWithIndex.foreach { case (url, i) =>
+    urlsChunk.zipWithIndex.foreach { case (url, i) =>
       if (i % 50 == 0) {
         appendLinesToFile(productsFile, buffer)
         buffer.clear()
-        logger.info(s"$i of ${urls.size} stored into $productsFile")
+        logger.info(s"$i of ${urlsChunk.size} stored into $productsFile")
       }
       try {
         val doc = browser.get(url)
