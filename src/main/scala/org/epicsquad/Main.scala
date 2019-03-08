@@ -1,14 +1,21 @@
 package org.epicsquad
 
+import org.epicsquad.parsers.{CastoramaParser, WildberriesParser}
+
 object Main extends App {
-  val parser = new AuchanParser
-  /*parser.parse(
-    "/home/dloshkarev/Downloads/auchan/",
-    "/home/dloshkarev/Downloads/auchan/auchan-product-urls.txt",
-    "/home/dloshkarev/Downloads/auchan/auchan-products.txt"
+  /*val parser = new CastoramaParser
+  parser.parseProductUrls(
+    "D:\\castorama-urls.txt"
   )*/
+  /*val parser = new WildberriesParser
   parser.parseProductsFromFile(
-    "/home/dloshkarev/Downloads/auchan/auchan-product-urls.txt",
-    "/home/dloshkarev/Downloads/auchan/auchan-products.txt"
+    "D:\\wildberries-urls.txt",
+    "D:\\wildberries-products.txt"
+  )*/
+
+  val parser = new CastoramaParser
+  parser.parseProductsFromFile(
+    "D:\\castorama-urls.txt",
+    "D:\\castorama-products.txt"
   )
 }
