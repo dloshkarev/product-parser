@@ -1,10 +1,11 @@
-package org.epicsquad
+package org.epicsquad.parsers
 
 import java.nio.file.{Files, Paths}
 
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
+import org.epicsquad.Product
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable

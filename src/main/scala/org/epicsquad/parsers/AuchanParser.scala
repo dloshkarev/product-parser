@@ -1,9 +1,10 @@
-package org.epicsquad
+package org.epicsquad.parsers
 
 import java.nio.file.{Files, Paths}
 
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
+import org.epicsquad.Product
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters.seqAsJavaListConverter
@@ -55,7 +56,7 @@ class AuchanParser extends ProductParser {
         val doc = browser.get(url)
         val name = doc >> text("h1")
         val category = (doc >> elementList(".breadcrumbs__list a")).drop(1).map(_.text).mkString("/")
-        val brand = doc >?> text(".prcard__feat-item strong")
+        val brand = parseMeta(doc, "brand")
         val product = Product(url, name, brand, Some(category))
         buffer += product.toCsv + "\n"
       } catch {

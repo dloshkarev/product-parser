@@ -1,4 +1,4 @@
-package org.epicsquad
+package org.epicsquad.parsers
 
 import java.io.FileWriter
 import java.net.URL
@@ -9,6 +9,7 @@ import net.ruippeixotog.scalascraper.browser.JsoupBrowser.JsoupDocument
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
+import org.epicsquad.Settings
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.{DesiredCapabilities, RemoteWebDriver}
 
