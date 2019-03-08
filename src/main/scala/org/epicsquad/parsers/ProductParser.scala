@@ -69,6 +69,8 @@ trait ProductParser extends StrictLogging {
     doc >?> extractor("meta[" + attrName + "=" + attrValue + "]", attr("content"))
   }
 
+  def toUrl(link: String) = if (link.startsWith("http")) link else baseUrl + link
+
   def parseProductUrls(productUrlsFile: String): Seq[String]
 
   def parseProductsFromFile(file: String, productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
@@ -79,7 +81,7 @@ trait ProductParser extends StrictLogging {
     if (drop == 0) {
       deleteFileIfExists(productsFile)
     }
-    val urlsChunk = if (drop != 0 && take != 0) urls.slice(drop, take)
+    val urlsChunk = if (drop != 0 && take != 0) urls.slice(drop, drop + take)
     else if (drop != 0) urls.drop(drop)
     else if (take != 0) urls.take(take)
     else urls

@@ -16,12 +16,12 @@ class KomusParser extends ProductParser {
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     val topMenuUrls = prepareUrls(browser.get(baseUrl) >> elementList("a.js-menuItemLink")).map { u =>
       if (u.startsWith("http")) u
-      else baseUrl + u
+      else toUrl(u)
     }
     val productUrls = topMenuUrls.flatMap { topMenuUrl =>
       val secondMenu = browser.get(topMenuUrl) >> elementList("a.b-menu__item.b-collection__item")
       if (secondMenu.nonEmpty) {
-        val secondMenuUrls = prepareUrls(secondMenu).map(u => baseUrl + u)
+        val secondMenuUrls = prepareUrls(secondMenu).map(u => toUrl(u))
         secondMenuUrls.flatMap(secondMenuUrl => processMenu(secondMenuUrl))
       } else {
         processMenu(topMenuUrl)
@@ -32,11 +32,19 @@ class KomusParser extends ProductParser {
   }
 
   def processMenu(topMenuUrl: String): Seq[String] = {
-    val menuUrls = prepareUrls(browser.get(topMenuUrl) >> elementList("a.b-account__item--label"))
+    val menuUrls = prepareUrls(browser.get(toUrl(topMenuUrl)) >> elementList("a.b-account__item--label"))
     menuUrls.zipWithIndex.flatMap { case (menuUrl, i) =>
       try {
-        logger.info(s"Done $i from ${menuUrls.size}")
-        getProductUrls(baseUrl + menuUrl)
+        val innerMenuUrls = prepareUrls(browser.get(toUrl(menuUrl)) >> elementList("a.b-account__item--label"))
+        val productUrls = if (innerMenuUrls.isEmpty) {
+          logger.info(s"Done $i from ${menuUrls.size}")
+          getProductUrls(menuUrl)
+        } else {
+          logger.info(s"Process inner menu $menuUrl")
+          innerMenuUrls.flatMap(u => getProductUrls(u))
+        }
+        logger.info(s"Found: ${productUrls.size}")
+        productUrls
       } catch {
         case e: Throwable =>
           logger.error(s"Something went wrong!", e)
@@ -48,7 +56,7 @@ class KomusParser extends ProductParser {
   def getProductUrls(categoryUrl: String, page: Int = 1, acc: List[String] = List()): List[String] = {
     val url = categoryUrl + "?page=" + page
     try {
-      val doc = browser.get(url)
+      val doc = browser.get(toUrl(url))
       val title = doc >> text("title")
       logger.info(title)
       val needToStop = (doc >?> element(".b-pageNumber__item--next")).isEmpty
