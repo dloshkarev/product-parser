@@ -13,43 +13,37 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 class KomusParser extends ProductParser {
   override protected val baseUrl: String = "https://www.komus.ru"
 
+  val menuCss = "a.b-account__item--label"
+
+  val stop = Set(
+    "https://www.komus.ru/news/statichnye-stranitsy/vkusnosti/n/210114/?from=menu",
+    "https://www.komus.ru/news/statichnye-stranitsy/komus-diskont/n/7321143/?from=menu"
+  )
+
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     val topMenuUrls = prepareUrls(browser.get(baseUrl) >> elementList("a.js-menuItemLink")).map { u =>
       if (u.startsWith("http")) u
       else toUrl(u)
-    }
+    }.filterNot(stop.contains)
     val productUrls = topMenuUrls.flatMap { topMenuUrl =>
-      val secondMenu = browser.get(topMenuUrl) >> elementList("a.b-menu__item.b-collection__item")
-      if (secondMenu.nonEmpty) {
-        val secondMenuUrls = prepareUrls(secondMenu).map(u => toUrl(u))
-        secondMenuUrls.flatMap(secondMenuUrl => processMenu(secondMenuUrl))
-      } else {
-        processMenu(topMenuUrl)
-      }
+      processMenu(topMenuUrl)
     }.distinct
     Files.write(Paths.get(productUrlsFile), productUrls.asJava)
     productUrls
   }
 
   def processMenu(topMenuUrl: String): Seq[String] = {
-    val menuUrls = prepareUrls(browser.get(toUrl(topMenuUrl)) >> elementList("a.b-account__item--label"))
-    menuUrls.zipWithIndex.flatMap { case (menuUrl, i) =>
-      try {
-        val innerMenuUrls = prepareUrls(browser.get(toUrl(menuUrl)) >> elementList("a.b-account__item--label"))
-        val productUrls = if (innerMenuUrls.isEmpty) {
-          logger.info(s"Done $i from ${menuUrls.size}")
-          getProductUrls(menuUrl)
-        } else {
-          logger.info(s"Process inner menu $menuUrl")
-          innerMenuUrls.flatMap(u => getProductUrls(u))
-        }
-        logger.info(s"Found: ${productUrls.size}")
-        productUrls
-      } catch {
-        case e: Throwable =>
-          logger.error(s"Something went wrong!", e)
-          None
-      }
+    val doc = browser.get(toUrl(topMenuUrl))
+    val imageMenu = prepareUrls(doc >> elementList("a.b-menu__item.b-collection__item"))
+    val innerMenu = prepareUrls(doc >> elementList(menuCss))
+    if (imageMenu.isEmpty && innerMenu.isEmpty) {
+      val productUrls = getProductUrls(topMenuUrl)
+      logger.info(s"Found: ${productUrls.size}")
+      productUrls
+    }
+    else {
+      val menuUrls = if (innerMenu.nonEmpty) innerMenu else imageMenu
+      menuUrls.flatMap(processMenu)
     }
   }
 

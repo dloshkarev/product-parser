@@ -1,6 +1,6 @@
 package org.epicsquad
 
-import org.epicsquad.parsers.{CastoramaParser, WildberriesParser}
+import org.epicsquad.parsers.{AuchanParser, CastoramaParser, KomusParser, WildberriesParser}
 
 object Main extends App {
   /*val parser = new CastoramaParser
@@ -13,9 +13,17 @@ object Main extends App {
     "D:\\wildberries-products.txt"
   )*/
 
-  val parser = new CastoramaParser
+  /*val parser = new AuchanParser
   parser.parseProductsFromFile(
-    "D:\\castorama-urls.txt",
-    "D:\\castorama-products.txt"
+    "D:\\auchan-urls.txt",
+    "D:\\auchan-products.txt",
+    50000,
+    10000
+  )*/
+
+  val parser = new KomusParser
+  parser.parseProductsFromFile(
+    "D:\\komus-urls.txt",
+    "D:\\komus-products.txt"
   )
 }
