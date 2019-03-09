@@ -1,5 +1,17 @@
 # Product catalog parser tools
 
+### Can parse:
+
+- https://www.auchan.ru
+
+- https://www.komus.ru
+
+- https://www.auchan.ru
+
+- https://www.wildberries.ru
+
+- https://www.castorama.ru
+
 ### Selenium setup
 
 https://tecadmin.net/setup-selenium-chromedriver-on-ubuntu/
