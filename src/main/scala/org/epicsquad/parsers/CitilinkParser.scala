@@ -10,11 +10,24 @@ import org.epicsquad.Product
 
 import scala.collection.JavaConverters.seqAsJavaListConverter
 
-class CastoramaParser extends ProductParser {
-  override protected val baseUrl: String = "https://www.castorama.ru"
+//TODO: doesn't work. Maybe later...
+class CitilinkParser extends ProductParser {
+  override protected val baseUrl: String = "https://www.citilink.ru"
 
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
-    val menuUrls = prepareUrls(browser.get(baseUrl) >> elementList(".sitemap-topmenu-link.level1"))
+    val stop = Set(
+      "https://www.citilink.ru/about/corporate/softsubscription/",
+      "https://www.citilink.ru/about/delivery/",
+      "https://www.citilink.ru/supplies/",
+      "https://www.citilink.ru/about/service/zaschita/",
+      "https://www.citilink.ru/about/service/strahovanie/",
+      "https://www.citilink.ru/services/",
+      "https://www.citilink.ru/about/service/setup/",
+      "https://www.citilink.ru/about/service/viezd/",
+      "https://www.citilink.ru/about/service/configuration/"
+    )
+
+    val menuUrls = prepareUrls(getProxyDoc(baseUrl) >> elementList(".subcategory-list-item__link-title a")).filterNot(stop.contains)
     val productUrls = menuUrls.zipWithIndex.flatMap { case (menuUrl, i) =>
       try {
         logger.info(s"Done $i from ${menuUrls.size}")
@@ -30,16 +43,14 @@ class CastoramaParser extends ProductParser {
   }
 
   def getProductUrls(categoryUrl: String, page: Int = 1, acc: List[String] = List()): List[String] = {
-    val url = categoryUrl + "?limit=96&p=" + page
+    val url = categoryUrl + "?p=" + page
     try {
-      val doc = browser.get(url)
+      val doc = getProxyDoc(toUrl(url))
       val title = doc >> text("title")
       logger.info(title)
-      if (page != 1 && !doc.location.contains("&p=" + page)) acc
-      else {
-        val productUrls = (doc >> elementList(".main-container .product-name a")).flatMap(_.href)
-        getProductUrls(categoryUrl, page + 1, acc ++ productUrls)
-      }
+      val productUrls = (doc >> elementList(".product_category_list a.ddl_product_link")).flatMap(_.href)
+      if ((doc >?> element("li.next")).isEmpty) acc ++ productUrls
+      else getProductUrls(categoryUrl, page + 1, acc ++ productUrls)
     } catch {
       case _: Throwable =>
         logger.info(s"Cannot parse page by $url")
@@ -50,6 +61,10 @@ class CastoramaParser extends ProductParser {
   override protected def parseProduct(doc: JsoupBrowser.JsoupDocument, url: String): Product = {
     val category = (doc >?> elementList(".breadcrumbs a")).flatMap(x => Option(x.drop(1).map(_.text).mkString("/")))
     val name = doc >> text("h1")
-    Product(url, name, None, category)
+    val brand = doc >?> element("div#flix-minisite") match {
+      case Some(e) => Some(e.attr("data-flix-brand"))
+      case None => None
+    }
+    Product(url, name, brand, category)
   }
 }

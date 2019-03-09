@@ -1,4 +1,4 @@
-scalaVersion := "2.12.5"
+scalaVersion := "2.11.12"
 
 name := "product-parser"
 version := "0.1"

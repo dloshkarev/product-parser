@@ -10,7 +10,7 @@ import net.ruippeixotog.scalascraper.browser.JsoupBrowser.JsoupDocument
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.model.Element
-import org.epicsquad.{Product, Settings}
+import org.epicsquad.{Product, ProxyData, Settings}
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.{DesiredCapabilities, RemoteWebDriver}
 
@@ -31,6 +31,34 @@ trait ProductParser extends StrictLogging {
   }
 
   protected val baseUrl: String
+
+  private var proxyList = List.empty[ProxyData]
+
+  private def tryProxy: Unit = {
+    if (proxyList.isEmpty) {
+      val proxyData = Source.fromResource("proxy.txt").getLines().map { line =>
+        val Array(host, port) = line.split(":", -1)
+        ProxyData(host, port)
+      }.toList
+      logger.info(s"Added ${proxyData.size} proxies from file")
+      proxyList = proxyData
+    }
+    val proxy = proxyList.head
+    proxyList = proxyList.tail
+    logger.info(s"Got brand new proxy browser")
+    System.setProperty("http.proxyHost", proxy.host)
+    System.setProperty("http.proxyPort", proxy.port)
+  }
+
+  protected def getProxyDoc(url: String): JsoupDocument = {
+    try {
+      browser.get(url)
+    } catch {
+      case _: Throwable =>
+        tryProxy
+        getProxyDoc(url)
+    }
+  }
 
   implicit def elementToExt(e: Element): ElementExt = new ElementExt(e)
 
