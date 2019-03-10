@@ -129,7 +129,7 @@ trait ProductParser extends StrictLogging {
     } else (correct, Seq())
 
     if (stillIncorrect.isEmpty) {
-      val unique = corrected.groupBy(p => (p.name, p.brand, p.category)).map(_._2.head).toSeq
+      val unique = corrected.groupBy(p => (p.name, p.brand)).map(_._2.head).toSeq
       logger.info(s"Found ${unique.size} unique products from ${corrected.size}")
 
       logger.info(s"${corrected.size} products added into: $productFile")
@@ -149,8 +149,11 @@ trait ProductParser extends StrictLogging {
       val files = dir.listFiles.filter(_.isFile)
       val newLines = files.foldLeft(Seq.empty[String]) { (acc, file) =>
         acc ++ Source.fromFile(file).getLines()
-      }.zipWithIndex.map { case (s, i) => Product.fromExportCsv(s, i) }
-        .map(_.toMerge)
+      }.zipWithIndex.map { case (s, i) =>
+        Product.fromExportCsv(s, i)
+      }
+      .groupBy(p => (p.name, p.brand)).map(_._2.head)
+      .map(_.toMerge)
       logger.info(s"Total merged lines: ${newLines.size}")
 
       val totalLines = Source.fromFile(currentCatalog).getLines().toSeq ++ newLines
