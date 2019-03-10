@@ -12,6 +12,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class DochkiSinochkiParser extends ProductParser {
   override protected val baseUrl: String = "https://www.dochkisinochki.ru"
+  override protected val source: String = "dochkisinochki"
 
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     val stop = Set(
@@ -78,6 +79,6 @@ class DochkiSinochkiParser extends ProductParser {
     val category = (doc >?> elementList("li[itemtype=\"https://data-vocabulary.org/Breadcrumb\"] > a > span")).flatMap(x => Option(x.map(_.text).mkString("/")))
     val name = doc >> text("h1")
     val brand = doc >?> text(".info span a")
-    Product(url, name, brand, category)
+    Product(source, url, name, brand, category)
   }
 }

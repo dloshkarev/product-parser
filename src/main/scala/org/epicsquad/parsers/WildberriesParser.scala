@@ -12,6 +12,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class WildberriesParser extends ProductParser {
   override protected val baseUrl: String = "https://www.wildberries.ru"
+  override protected val source: String = "wildberries"
 
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     val stop = Set(
@@ -61,6 +62,6 @@ class WildberriesParser extends ProductParser {
     val category = (doc >?> elementList(".breadcrumbs span:not(.divider)")).flatMap(x => Option(x.drop(1).map(_.text).mkString("/")))
     val name = doc >> text("h1")
     val brand = parseMeta(doc, "brand")
-    Product(url, name, brand, category)
+    Product(source, url, name, brand, category)
   }
 }

@@ -32,6 +32,7 @@ trait ProductParser extends StrictLogging {
   }
 
   protected val baseUrl: String
+  protected val source: String
 
   private var proxyList = Array.empty[ProxyData]
   private var proxyIdx = 0
@@ -90,12 +91,12 @@ trait ProductParser extends StrictLogging {
     else throw new RuntimeException("Selenium standalone server not started!")
   }
 
-  def parse(productUrlsFile: String, productsFile: String): Unit = {
+  def parse(source: String, productUrlsFile: String, productsFile: String): Unit = {
     logger.info("Parsing urls started")
     val productUrls = parseProductUrls(productUrlsFile)
     logger.info(s"Parsing urls finished. Stored ${productUrls.size} into $productUrlsFile")
     logger.info("Parsing products started")
-    parseProducts(productUrls, productsFile)
+    parseProducts(source, productUrls, productsFile)
     logger.info(s"Parsing products finished. Stored into $productsFile")
     if (webDriverOpt.nonEmpty) {
       webDriver.close()
@@ -103,9 +104,19 @@ trait ProductParser extends StrictLogging {
   }
 
   def exportProducts(productFile: String, outFile: String): Unit = {
-    val products = Source.fromFile(productFile).getLines().toSeq.map(Product.fromCsv)
-    val (correct, incorrect) = products.partition(_.name.nonEmpty)
-    logger.info(s"Found ${incorrect.size} incorrect lines. Try to fix...")
+    deleteFileIfExists(outFile)
+    val products = Source.fromFile(productFile).getLines()
+      .map(_.replaceAll("\"","").trim)
+      .zipWithIndex
+      .toSeq
+      .map { case (line, n) => Product.fromCsv(line, n) }
+    val unique = products.groupBy(p => (p.name, p.brand, p.category)).map(_._2.head).toSeq
+    logger.info(s"Found ${unique.size} unique products from ${products.size}")
+
+    val (correct, incorrect) = unique.partition(_.name.nonEmpty)
+    if (incorrect.nonEmpty) {
+      logger.info(s"Found ${incorrect.size} incorrect lines. Try to fix...")
+    }
     val (corrected, stillIncorrect) = restoreProductsRecursively(incorrect)
 
     val fullCorrect = if (stillIncorrect.isEmpty) correct ++ corrected
@@ -113,11 +124,26 @@ trait ProductParser extends StrictLogging {
     Files.write(Paths.get(productFile), fullCorrect.map(_.toCsv).asJava)
 
     if (stillIncorrect.isEmpty) {
-      logger.info(s"${corrected.size} corrected products added into: $productFile")
+      logger.info(s"${fullCorrect.size} products added into: $productFile")
       Files.write(Paths.get(outFile), fullCorrect.map(_.toExport).asJava)
       logger.info(s"${fullCorrect.size} products exported into: $outFile")
     } else {
       logger.error(s"Could not correct all products, keep falling: ${stillIncorrect.size}")
+    }
+  }
+
+  def mergeCsv(csvDirectory: String, outFile: String): Unit = {
+    deleteFileIfExists(outFile)
+    val dir = new java.io.File(csvDirectory)
+    if (dir.exists && dir.isDirectory) {
+      val files = dir.listFiles.filter(_.isFile)
+      val totalLines = Seq("source;name;brand;category") ++ files.foldLeft(Seq.empty[String]) { (acc, file) =>
+        acc ++ Source.fromFile(file).getLines()
+      }
+      Files.write(Paths.get(outFile), totalLines.asJava)
+      logger.info(s"Total lines: ${totalLines.size}. Saved into: $outFile")
+    } else {
+      throw new RuntimeException("Incorrect csv directory!")
     }
   }
 
@@ -147,11 +173,11 @@ trait ProductParser extends StrictLogging {
 
   def parseProductUrls(productUrlsFile: String): Seq[String]
 
-  def parseProductsFromFile(file: String, productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
-    parseProducts(Source.fromFile(file).getLines().toSeq, productsFile, drop, take)
+  def parseProductsFromFile(source: String, file: String, productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
+    parseProducts(source, Source.fromFile(file).getLines().toSeq.distinct, productsFile, drop, take)
   }
 
-  def parseProducts(urls: Seq[String], productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
+  def parseProducts(source: String, urls: Seq[String], productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
     if (drop == 0) {
       deleteFileIfExists(productsFile)
     }
@@ -175,7 +201,7 @@ trait ProductParser extends StrictLogging {
       } catch {
         case e: Throwable =>
           logger.error("Error during product parsing: " + url)
-          val product = Product(url)
+          val product = Product(source, url)
           buffer += product.toCsv + ";" + e.getLocalizedMessage + "\n"
       }
     }

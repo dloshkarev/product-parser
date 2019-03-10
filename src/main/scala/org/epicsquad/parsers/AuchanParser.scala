@@ -12,6 +12,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class AuchanParser extends ProductParser {
   override val baseUrl: String = "https://www.auchan.ru/"
+  override protected val source: String = "auchan"
 
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     deleteFileIfExists(productUrlsFile)
@@ -46,6 +47,6 @@ class AuchanParser extends ProductParser {
     val name = doc >> text("h1")
     val category = (doc >> elementList(".breadcrumbs__list a")).drop(1).map(_.text).mkString("/")
     val brand = parseMeta(doc, "brand")
-    Product(url, name, brand, Some(category))
+    Product(source, url, name, brand, Some(category))
   }
 }

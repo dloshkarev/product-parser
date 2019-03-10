@@ -12,6 +12,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class CastoramaParser extends ProductParser {
   override protected val baseUrl: String = "https://www.castorama.ru"
+  override protected val source: String = "castorama"
 
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     val menuUrls = prepareUrls(browser.get(baseUrl) >> elementList(".sitemap-topmenu-link.level1"))
@@ -50,6 +51,6 @@ class CastoramaParser extends ProductParser {
   override protected def parseProduct(doc: JsoupBrowser.JsoupDocument, url: String): Product = {
     val category = (doc >?> elementList(".breadcrumbs a")).flatMap(x => Option(x.drop(1).map(_.text).mkString("/")))
     val name = doc >> text("h1")
-    Product(url, name, None, category)
+    Product(source, url, name, None, category)
   }
 }

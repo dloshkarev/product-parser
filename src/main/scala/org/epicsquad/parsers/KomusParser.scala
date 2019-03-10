@@ -12,6 +12,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 
 class KomusParser extends ProductParser {
   override protected val baseUrl: String = "https://www.komus.ru"
+  override protected val source: String = "komus"
 
   val menuCss = "a.b-account__item--label"
 
@@ -68,6 +69,6 @@ class KomusParser extends ProductParser {
     val category = (doc >?> elementList(".b-breadcrumbs__list a")).flatMap(x => Option(x.drop(2).map(_.text).mkString("/")))
     val name = doc >> text("h1")
     val brand = doc >?> text(".i-dib.i-pl2 a")
-    Product(url, name, brand, category)
+    Product(source, url, name, brand, category)
   }
 }

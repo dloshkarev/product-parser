@@ -13,6 +13,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 //TODO: doesn't work. Maybe later...
 class CitilinkParser extends ProductParser {
   override protected val baseUrl: String = "https://www.citilink.ru"
+  override protected val source: String = "citilink"
 
   override def parseProductUrls(productUrlsFile: String): Seq[String] = {
     val stop = Set(
@@ -65,6 +66,6 @@ class CitilinkParser extends ProductParser {
       case Some(e) => Some(e.attr("data-flix-brand"))
       case None => None
     }
-    Product(url, name, brand, category)
+    Product(source, url, name, brand, category)
   }
 }
