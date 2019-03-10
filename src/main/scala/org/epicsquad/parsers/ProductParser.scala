@@ -104,9 +104,11 @@ trait ProductParser extends StrictLogging {
   }
 
   def getDiff(productFile: String, urlFile: String, diffFile: String): Unit = {
+    deleteFileIfExists(diffFile)
     val productUrls = Source.fromFile(productFile).getLines().map(_.split(";", -1)(0)).toSet
     val urls = Source.fromFile(urlFile).getLines().toSet
     val diff = urls -- productUrls
+    logger.info(s"Found ${diff.size} diffs")
     Files.write(Paths.get(diffFile), diff.toSeq.asJava)
   }
 
@@ -120,24 +122,24 @@ trait ProductParser extends StrictLogging {
       .map { case (line, n) => Product.fromCsv(line, n) }
 
     val (correct, incorrect) = products.partition(_.name.nonEmpty)
-    if (incorrect.nonEmpty) {
+
+    val (corrected, stillIncorrect) = if (incorrect.nonEmpty) {
       logger.info(s"Found ${incorrect.size} incorrect lines. Try to fix...")
-    }
-    val (corrected, stillIncorrect) = restoreProductsRecursively(incorrect)
+      restoreProductsRecursively(incorrect, correct)
+    } else (correct, Seq())
 
     if (stillIncorrect.isEmpty) {
       val unique = corrected.groupBy(p => (p.name, p.brand, p.category)).map(_._2.head).toSeq
       logger.info(s"Found ${unique.size} unique products from ${corrected.size}")
 
-      val fullCorrect = correct ++ corrected
-      logger.info(s"${fullCorrect.size} products added into: $productFile")
-      Files.write(Paths.get(outFile), fullCorrect.map(_.toExport).asJava)
-      logger.info(s"${fullCorrect.size} products exported into: $outFile")
+      logger.info(s"${corrected.size} products added into: $productFile")
+      Files.write(Paths.get(outFile), corrected.map(_.toExport).asJava)
+      logger.info(s"${corrected.size} products exported into: $outFile")
     } else {
       logger.error(s"Could not correct all products, keep falling: ${stillIncorrect.size}")
     }
 
-    Files.write(Paths.get(productFile), (correct ++ corrected ++ stillIncorrect).map(_.toCsv).asJava)
+    Files.write(Paths.get(productFile), (corrected ++ stillIncorrect).map(_.toCsv).asJava)
   }
 
   def mergeFormatInclude(currentCatalog: String, csvDirectory: String, outFile: String): Unit = {
