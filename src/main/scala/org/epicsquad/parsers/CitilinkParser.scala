@@ -1,14 +1,10 @@
 package org.epicsquad.parsers
 
-import java.nio.file.{Files, Paths}
-
 import net.ruippeixotog.scalascraper.browser.JsoupBrowser
 import net.ruippeixotog.scalascraper.dsl.DSL.Extract._
 import net.ruippeixotog.scalascraper.dsl.DSL._
 import net.ruippeixotog.scalascraper.scraper.ContentExtractors.elementList
 import org.epicsquad.Product
-
-import scala.collection.JavaConverters.seqAsJavaListConverter
 
 //TODO: doesn't work. Maybe later...
 class CitilinkParser extends ProductParser {
@@ -31,15 +27,16 @@ class CitilinkParser extends ProductParser {
     val menuUrls = prepareUrls(getProxyDoc(baseUrl) >> elementList(".subcategory-list-item__link-title a")).filterNot(stop.contains)
     val productUrls = menuUrls.zipWithIndex.flatMap { case (menuUrl, i) =>
       try {
+        val productUrls = getProductUrls(menuUrl)
+        appendLinesToFile(productUrlsFile, productUrls)
         logger.info(s"Done $i from ${menuUrls.size}")
-        getProductUrls(menuUrl)
+        productUrls
       } catch {
         case e: Throwable =>
           logger.error(s"Something went wrong!", e)
           None
       }
     }.distinct
-    Files.write(Paths.get(productUrlsFile), productUrls.asJava)
     productUrls
   }
 

@@ -19,6 +19,7 @@ import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.mutable
 import scala.io.Source
 import scala.reflect.io.File
+import scala.util.Random
 
 trait ProductParser extends StrictLogging {
   protected val browser = new JsoupBrowser
@@ -35,11 +36,10 @@ trait ProductParser extends StrictLogging {
   protected val source: String
 
   private var proxyList = Array.empty[ProxyData]
-  private var proxyIdx = 0
 
   private def rotateProxy: Unit = {
     if (proxyList.isEmpty) {
-      val proxyData = Source.fromResource("proxy.txt").getLines().map { line =>
+      val proxyData = Source.fromResource("proxy.txt").getLines().toSeq.distinct.map { line =>
         val Array(host, port) = line.split(":", -1)
         ProxyData(host, port)
       }.toArray
@@ -47,23 +47,18 @@ trait ProductParser extends StrictLogging {
       proxyList = proxyData
     }
 
-    if (proxyIdx == proxyList.length) {
-      proxyIdx = 0
-      logger.info("Proxies are gone....:(")
-    } else {
-      val proxy = proxyList(proxyIdx)
-      proxyIdx += 1
-      System.setProperty("http.proxyHost", proxy.host)
-      System.setProperty("http.proxyPort", proxy.port)
-    }
+    val proxy = proxyList(Random.nextInt(proxyList.length - 1))
+    System.setProperty("http.proxyHost", proxy.host)
+    System.setProperty("http.proxyPort", proxy.port)
   }
 
   protected def getProxyDoc(url: String): JsoupDocument = {
     try {
       rotateProxy
+      Thread.sleep(Random.nextInt(5000))
       browser.get(url)
     } catch {
-      case e: HttpStatusException =>
+      case _: HttpStatusException =>
         getProxyDoc(url)
     }
   }
