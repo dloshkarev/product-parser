@@ -103,33 +103,41 @@ trait ProductParser extends StrictLogging {
     }
   }
 
+  def getDiff(productFile: String, urlFile: String, diffFile: String): Unit = {
+    val productUrls = Source.fromFile(productFile).getLines().map(_.split(";", -1)(0)).toSet
+    val urls = Source.fromFile(urlFile).getLines().toSet
+    val diff = urls -- productUrls
+    Files.write(Paths.get(diffFile), diff.toSeq.asJava)
+  }
+
   def exportProducts(productFile: String, outFile: String): Unit = {
     deleteFileIfExists(outFile)
+
     val products = Source.fromFile(productFile).getLines()
       .map(_.replaceAll("\"", "").trim)
       .zipWithIndex
       .toSeq
       .map { case (line, n) => Product.fromCsv(line, n) }
-    val unique = products.groupBy(p => (p.name, p.brand, p.category)).map(_._2.head).toSeq
-    logger.info(s"Found ${unique.size} unique products from ${products.size}")
 
-    val (correct, incorrect) = unique.partition(_.name.nonEmpty)
+    val (correct, incorrect) = products.partition(_.name.nonEmpty)
     if (incorrect.nonEmpty) {
       logger.info(s"Found ${incorrect.size} incorrect lines. Try to fix...")
     }
     val (corrected, stillIncorrect) = restoreProductsRecursively(incorrect)
 
-    val fullCorrect = if (stillIncorrect.isEmpty) correct ++ corrected
-    else correct ++ corrected ++ stillIncorrect
-    Files.write(Paths.get(productFile), fullCorrect.map(_.toCsv).asJava)
-
     if (stillIncorrect.isEmpty) {
+      val unique = corrected.groupBy(p => (p.name, p.brand, p.category)).map(_._2.head).toSeq
+      logger.info(s"Found ${unique.size} unique products from ${corrected.size}")
+
+      val fullCorrect = correct ++ corrected
       logger.info(s"${fullCorrect.size} products added into: $productFile")
       Files.write(Paths.get(outFile), fullCorrect.map(_.toExport).asJava)
       logger.info(s"${fullCorrect.size} products exported into: $outFile")
     } else {
       logger.error(s"Could not correct all products, keep falling: ${stillIncorrect.size}")
     }
+
+    Files.write(Paths.get(productFile), (correct ++ corrected ++ stillIncorrect).map(_.toCsv).asJava)
   }
 
   def mergeFormatInclude(currentCatalog: String, csvDirectory: String, outFile: String): Unit = {
@@ -177,7 +185,7 @@ trait ProductParser extends StrictLogging {
 
   def parseProductUrls(productUrlsFile: String): Seq[String]
 
-  def parseProductsFromFile(source: String, file: String, productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
+  def parseProductsFromFile(file: String, productsFile: String, drop: Int = 0, take: Int = 0): Unit = {
     parseProducts(source, Source.fromFile(file).getLines().toSeq.distinct, productsFile, drop, take)
   }
 
