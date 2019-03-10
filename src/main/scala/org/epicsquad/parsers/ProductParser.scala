@@ -106,7 +106,7 @@ trait ProductParser extends StrictLogging {
   def exportProducts(productFile: String, outFile: String): Unit = {
     deleteFileIfExists(outFile)
     val products = Source.fromFile(productFile).getLines()
-      .map(_.replaceAll("\"","").trim)
+      .map(_.replaceAll("\"", "").trim)
       .zipWithIndex
       .toSeq
       .map { case (line, n) => Product.fromCsv(line, n) }
@@ -132,16 +132,20 @@ trait ProductParser extends StrictLogging {
     }
   }
 
-  def mergeCsv(csvDirectory: String, outFile: String): Unit = {
+  def mergeFormatInclude(currentCatalog: String, csvDirectory: String, outFile: String): Unit = {
     deleteFileIfExists(outFile)
     val dir = new java.io.File(csvDirectory)
     if (dir.exists && dir.isDirectory) {
       val files = dir.listFiles.filter(_.isFile)
-      val totalLines = Seq("source;name;brand;category") ++ files.foldLeft(Seq.empty[String]) { (acc, file) =>
+      val newLines = files.foldLeft(Seq.empty[String]) { (acc, file) =>
         acc ++ Source.fromFile(file).getLines()
-      }
+      }.zipWithIndex.map { case (s, i) => Product.fromExportCsv(s, i) }
+        .map(_.toMerge)
+      logger.info(s"Total merged lines: ${newLines.size}")
+
+      val totalLines = Source.fromFile(currentCatalog).getLines().toSeq ++ newLines
       Files.write(Paths.get(outFile), totalLines.asJava)
-      logger.info(s"Total lines: ${totalLines.size}. Saved into: $outFile")
+      logger.info(s"Total lines including current catalog: ${totalLines.size}. Saved into: $outFile")
     } else {
       throw new RuntimeException("Incorrect csv directory!")
     }
