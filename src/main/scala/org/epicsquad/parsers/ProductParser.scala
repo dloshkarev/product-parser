@@ -132,9 +132,9 @@ trait ProductParser extends StrictLogging {
       val unique = corrected.groupBy(p => (p.name, p.brand)).map(_._2.head).toSeq
       logger.info(s"Found ${unique.size} unique products from ${corrected.size}")
 
-      logger.info(s"${corrected.size} products added into: $productFile")
-      Files.write(Paths.get(outFile), corrected.map(_.toExport).asJava)
-      logger.info(s"${corrected.size} products exported into: $outFile")
+      logger.info(s"${unique.size} products added into: $productFile")
+      Files.write(Paths.get(outFile), unique.map(_.toExport).asJava)
+      logger.info(s"${unique.size} products exported into: $outFile")
     } else {
       logger.error(s"Could not correct all products, keep falling: ${stillIncorrect.size}")
     }
@@ -165,7 +165,7 @@ trait ProductParser extends StrictLogging {
   }
 
   def restoreProductsRecursively(incorrect: Seq[Product], correct: Seq[Product] = Seq(), cnt: Int = 0): (Seq[Product], Seq[Product]) = {
-    if (cnt == 10 || incorrect.isEmpty) (correct, incorrect)
+    if (cnt == 3 || incorrect.isEmpty) (correct, incorrect)
     else {
       val (corrected, stillIncorrect) = incorrect
         .map { p =>
