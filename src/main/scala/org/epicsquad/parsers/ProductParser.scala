@@ -137,7 +137,7 @@ trait ProductParser extends StrictLogging {
     Files.write(Paths.get(productFile), (corrected ++ stillIncorrect).map(_.toCsv).asJava)
   }
 
-  def mergeFormatInclude(currentCatalog: String, csvDirectory: String, outFile: String): Unit = {
+  def mergeFormatInclude(csvDirectory: String, outFile: String, currentCatalog: Option[String] = None): Unit = {
     deleteFileIfExists(outFile)
     val dir = new java.io.File(csvDirectory)
     if (dir.exists && dir.isDirectory) {
@@ -151,7 +151,12 @@ trait ProductParser extends StrictLogging {
       .map(_.toMerge)
       logger.info(s"Total merged lines: ${newLines.size}")
 
-      val totalLines = Source.fromFile(currentCatalog).getLines().toSeq ++ newLines
+      val totalLines = currentCatalog match {
+        case Some(currentCatalogPath) =>
+          Source.fromFile(currentCatalogPath).getLines().toSeq ++ newLines
+        case None =>
+          newLines.toSeq
+      }
       Files.write(Paths.get(outFile), totalLines.asJava)
       logger.info(s"Total lines including current catalog: ${totalLines.size}. Saved into: $outFile")
     } else {
